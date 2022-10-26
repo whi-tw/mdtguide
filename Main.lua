@@ -48,7 +48,7 @@ function Addon.EnableGuideMode(noZoom)
     end
 
     -- Resize
-    main:SetMinResize(Addon.MIN_HEIGHT * Addon.RATIO, Addon.MIN_HEIGHT)
+    main:SetResizeBounds(Addon.MIN_HEIGHT * Addon.RATIO, Addon.MIN_HEIGHT)
     MDT:StartScaling()
     MDT:SetScale(MDTGuideOptions.height / Addon.HEIGHT)
     MDT:UpdateMap(true)
@@ -159,7 +159,7 @@ function Addon.DisableGuideMode()
     Addon.ZoomBy(1 / Addon.ZOOM)
     MDT:GetDB().nonFullscreenScale = 1
     MDT:Minimize()
-    main:SetMinResize(Addon.WIDTH * 0.75, Addon.HEIGHT * 0.75)
+    main:SetResizeBounds(Addon.WIDTH * 0.75, Addon.HEIGHT * 0.75)
 
     -- Reset enemy info frame
     if MDT.EnemyInfoFrame and MDT.EnemyInfoFrame:IsShown() then

@@ -1,1 +1,2 @@
-- Updated ToC version for patch 9.2.5
+- Updated ToC version for patch 10.0
+- Fix GUI bugs from 10.0 changes
