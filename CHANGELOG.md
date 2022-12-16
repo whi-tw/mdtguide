@@ -1,3 +1,7 @@
+Version 1.13
+
+- Updated ToC version
+
 Version 1.12
 
 - Updated ToC version for patch 10.0
