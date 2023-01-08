@@ -1,2 +1,1 @@
-- Fix top bar button placement
-- Scale pull number on the map with zoom level
+- Fix current instance detection and zooming to current pull

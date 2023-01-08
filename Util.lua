@@ -8,13 +8,20 @@ function Addon.GetNPCId(guid)
     return tonumber(select(6, ("-"):split(guid)), 10)
 end
 
-function Addon.GetInstanceDungeonId(instance)
-    if instance then
-        for id,enemies in pairs(MDT.dungeonEnemies) do
-            for _,enemy in pairs(enemies) do
-                if enemy.instanceID == instance then
-                    return id
-                end
+function Addon.GetInstanceDungeonId(map)
+    if not map then return end
+
+    if MDT.zoneIdToDungeonIdx[map] then
+        return MDT.zoneIdToDungeonIdx[map]
+    end
+
+    local instance = EJ_GetInstanceForMap(map)
+    if not instance then return end
+
+    for id,enemies in pairs(MDT.dungeonEnemies) do
+        for _,enemy in pairs(enemies) do
+            if enemy.instanceID == instance then
+                return id
             end
         end
     end

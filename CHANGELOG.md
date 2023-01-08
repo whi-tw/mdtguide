@@ -1,3 +1,8 @@
+Version 1.14
+
+- Fix top bar button placement
+- Scale pull number on the map with zoom level
+
 Version 1.13
 
 - Updated ToC version

@@ -499,12 +499,12 @@ local Frame = CreateFrame("Frame")
 local OnEvent = function (_, ev, ...)
     if not MDT or MDT:GetDB().devMode then return end
 
-    if ev == "PLAYER_ENTERING_WORLD" then
+    if ev == "PLAYER_ENTERING_WORLD" or ev == "ZONE_CHANGED_NEW_AREA" then
         local _, instanceType = IsInInstance()
         if instanceType == "party" then
             local map = C_Map.GetBestMapForUnit("player")
             if map then
-                local dungeon = Addon.GetInstanceDungeonId(EJ_GetInstanceForMap(map))
+                local dungeon = Addon.GetInstanceDungeonId(map)
 
                 if dungeon ~= Addon.currentDungeon then
                     Addon.SetInstanceDungeon(dungeon)
@@ -565,5 +565,6 @@ end
 Frame:SetScript("OnEvent", OnEvent)
 Frame:SetScript("OnUpdate", OnUpdate)
 Frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+Frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 Frame:RegisterEvent("SCENARIO_COMPLETED")
 Frame:RegisterEvent("CHAT_MSG_SYSTEM")
