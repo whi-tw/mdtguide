@@ -1,1 +1,2 @@
 - Fix portal map building for dungeons without portals
+- Improve zoom levels for dragonflight season 1 dungeons

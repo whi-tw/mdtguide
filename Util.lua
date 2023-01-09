@@ -1,4 +1,5 @@
-local Name, Addon = ...
+---@class Addon
+local Addon = select(2, ...)
 
 function Addon.IsNPC(guid)
     return guid and guid:sub(1, 8) == "Creature"
@@ -39,6 +40,11 @@ function Addon.GetDungeonScale(dungeon)
     return MDT.scaleMultiplier[dungeon or Addon.GetCurrentDungeonId()] or 1
 end
 
+function Addon.GetZoomScale(dungeon)
+    local data = Addon.dungeons[dungeon or Addon.GetCurrentDungeonId()]
+    return data and data.scale or 1
+end
+
 function Addon.GetCurrentEnemies()
     return MDT.dungeonEnemies[Addon.GetCurrentDungeonId()]
 end
@@ -74,8 +80,10 @@ function Addon.IteratePulls(fn, ...)
     end
 end
 
-function Addon.GetPullRect(pull, level)
+function Addon.GetPullRect(pull, level, border)
+    ---@type number, number, number, number
     local minX, minY, maxX, maxY
+
     Addon.IteratePull(pull, function (clone)
         local sub, x, y = clone.sublevel, clone.x, clone.y
         if sub == level then
@@ -83,23 +91,29 @@ function Addon.GetPullRect(pull, level)
             maxX, maxY = max(maxX or x, x), max(maxY or y, y)
         end
     end)
+
+    if border then
+        minX, minY, maxX, maxY = Addon.ExtendRect(minX, minY, maxX, maxY, border)
+    end
+
     return minX, minY, maxX, maxY
 end
 
 function Addon.ExtendRect(minX, minY, maxX, maxY, left, top, right, bottom)
-    if minX and left then
-        top = top or left
-        right = right or left
-        bottom = bottom or top
-        return max(0, minX - left), min(0, minY - top), maxX + right, maxY + bottom
-    end
+    if not minX or not left then return minX, minY, maxX, maxY end
+
+    top = top or left
+    right = right or left
+    bottom = bottom or top
+
+    return max(0, minX - left), min(0, minY - top), maxX + right, maxY + bottom
 end
 
 function Addon.CombineRects(minX, minY, maxX, maxY, minX2, minY2, maxX2, maxY2)
-    if minX and minX2 then
-        local diffX, diffY = max(0, minX - minX2, maxX2 - maxX), max(0, minY - minY2, maxY2 - maxY)
-        return Addon.ExtendRect(minX, minY, maxX, maxY, diffX, diffY)
-    end
+    if not minX or not minX2 then return minX, minY, maxX, maxY end
+
+    local diffX, diffY = max(0, minX - minX2, maxX2 - maxX), max(0, minY - minY2, maxY2 - maxY)
+    return Addon.ExtendRect(minX, minY, maxX, maxY, diffX, diffY)
 end
 
 function Addon.GetBestSubLevel(pull)

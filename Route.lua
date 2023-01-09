@@ -1,4 +1,7 @@
-local Name, Addon = ...
+---@type string
+local Name = ...
+---@class Addon
+local Addon = select(2, ...)
 
 -- # of hops to track back from previous result
 Addon.ROUTE_TRACK_BACK = 15
@@ -65,6 +68,7 @@ local function Last(path, enemies)
         end
 
         debug("No starting point!")
+
         return
     else
         local enemyId, cloneId = path:match("-e(%d+)c(%d+)-$")
@@ -126,12 +130,12 @@ local function Weight(path, enemies)
 
         local currNode, curr = Last(path, enemies)
         local currPull = currNode and pulls[currNode]
-        
+
         -- Base distance
         local dist = Distance(prev, curr)
 
         -- Weighted by group
-        if prev.g and curr.g and prev.g == curr.g then
+        if prev and curr and prev.g and curr.g and prev.g == curr.g then
             dist = dist * Addon.ROUTE_WEIGHT_GROUP
         end
 
@@ -390,9 +394,11 @@ end
 
 function Addon.GetCurrentPullByRoute()
     local path = MDTGuideRoute
+
     while path and path:len() > 0 do
-        local node = Last(path)
+        local node = Last(path) ---@cast node string
         local n = pulls[node]
+
         if n then
             local a, b = Addon.IteratePull(n, function (_, _, cloneId, enemyId, pull)
                 if not Contains(path, Node(enemyId, cloneId)) then
@@ -408,6 +414,7 @@ function Addon.GetCurrentPullByRoute()
                 return n, currPulls[n]
             end
         end
+
         path = path:sub(1, -node:len() - 3)
     end
 end
@@ -527,7 +534,8 @@ local OnEvent = function (_, ev, ...)
         Addon.SetInstanceDungeon()
         Frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     elseif ev == "COMBAT_LOG_EVENT_UNFILTERED" then
-        local _, event, _, _, _, sourceFlags, _, destGUID, _, destFlags = CombatLogGetCurrentEventInfo()
+        ---@type _, string, _, _, _, number, _, string, _, number
+        local _, event, _, _, _, sourceFlags, _, destGUID, _, destFlags = CombatLogGetCurrentEventInfo() --[[@as any]]
 
         if event == "UNIT_DIED" then
             if hits[destGUID] then

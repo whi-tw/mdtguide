@@ -1,4 +1,7 @@
-local Name, Addon = ...
+---@type string
+local Name = ...
+---@class Addon
+local Addon = select(2, ...)
 
 MDTG = Addon
 MDTGuideActive = false
@@ -315,7 +318,7 @@ function Addon.ZoomTo(minX, minY, maxX, maxY, subLevel, fromSub)
 
     -- Ensure min rect size
     local scale = MDT:GetScale()
-    local sizeScale = scale * Addon.GetDungeonScale()
+    local sizeScale = scale * Addon.GetDungeonScale() * Addon.GetZoomScale()
     local sizeX = Addon.MIN_X * sizeScale * MDTGuideOptions.zoomMin
     local sizeY = Addon.MIN_Y * sizeScale * MDTGuideOptions.zoomMin
 
@@ -336,47 +339,44 @@ end
 
 function Addon.ZoomToPull(n, fromSub)
     n = n or MDT:GetCurrentPull()
+
     local pulls = Addon.GetCurrentPulls()
+
     local pull = pulls[n]
+    if not pull then return end
+
+    local level = Addon.GetBestSubLevel(pull)
+    if not level then return end
 
     local dungeonScale = Addon.GetDungeonScale()
-    local sizeScale = MDT:GetScale() * dungeonScale
+    local sizeScale = MDT:GetScale() * dungeonScale * Addon.GetZoomScale()
     local sizeX = Addon.MAX_X * sizeScale * MDTGuideOptions.zoomMax
     local sizeY = Addon.MAX_Y * sizeScale * MDTGuideOptions.zoomMax
+    local border = Addon.ZOOM_BORDER * dungeonScale
 
-    if pull then
-        local bestSub = Addon.GetBestSubLevel(pull)
+    -- Get rect to zoom to
+    local minX, minY, maxX, maxY = Addon.GetPullRect(n, level, border)
 
-        if bestSub then
-            -- Get rect to zoom to
-            local minX, minY, maxX, maxY = Addon.GetPullRect(n, bestSub)
+    -- Try to include prev/next pulls
+    for i = 1, 4 do
+        for p = -i, i, 2 * i do
+            pull = pulls[n + p]
 
-            -- Border
-            minX, minY, maxX, maxY = Addon.ExtendRect(minX, minY, maxX, maxY, Addon.ZOOM_BORDER * dungeonScale)
+            if pull then
+                local pMinX, pMinY, pMaxX, pMaxY = Addon.CombineRects(minX, minY, maxX, maxY, Addon.GetPullRect(pull, level, border))
 
-            -- Try to include prev/next pulls
-            for i = 1, 4 do
-                for p = -i, i, 2 * i do
-                    pull = pulls[n + p]
-
-                    if pull then
-                        local pMinX, pMinY, pMaxX, pMaxY = Addon.CombineRects(minX, minY, maxX, maxY,
-                            Addon.GetPullRect(pull, bestSub))
-
-                        if pMinX and pMaxX - pMinX <= sizeX and pMaxY - pMinY <= sizeY then
-                            minX, minY, maxX, maxY = pMinX, pMinY, pMaxX, pMaxY
-                        end
-                    end
+                if pMinX and pMaxX - pMinX <= sizeX and pMaxY - pMinY <= sizeY then
+                    minX, minY, maxX, maxY = pMinX, pMinY, pMaxX, pMaxY
                 end
             end
-
-            -- Zoom to rect
-            Addon.ZoomTo(minX, minY, maxX, maxY, bestSub, fromSub)
-
-            -- Scroll pull list
-            Addon.ScrollToPull(n)
         end
     end
+
+    -- Zoom to rect
+    Addon.ZoomTo(minX, minY, maxX, maxY, level, fromSub)
+
+    -- Scroll pull list
+    Addon.ScrollToPull(n)
 end
 
 function Addon.ScrollToPull(n, center)
@@ -543,7 +543,9 @@ function Addon.GetEnemyForces()
     local n = select(3, C_Scenario.GetStepInfo())
     if not n or n == 0 then return end
 
-    local total, _, _, curr = select(5, C_Scenario.GetCriteriaInfo(n))
+    ---@type number, _, _, string
+    local total, _, _, curr = select(5, C_Scenario.GetCriteriaInfo(n)) --[[@as any]]
+
     return tonumber((curr:gsub("%%", ""))), total
 end
 
@@ -674,6 +676,7 @@ local OnEvent = function(_, ev, ...)
 
                 -- Insert toggle button
                 if not toggleBtn then
+                    ---@type MaximizeMinimizeButtonFrame
                     toggleBtn = CreateFrame("Button", nil, MDT.main_frame, "MaximizeMinimizeButtonFrameTemplate")
                     toggleBtn[MDTGuideActive and "Minimize" or "Maximize"](toggleBtn)
                     toggleBtn:SetOnMaximizedCallback(function() Addon.DisableGuideMode() end)
@@ -686,6 +689,7 @@ local OnEvent = function(_, ev, ...)
 
                 -- Insert current pull button
                 if not currentPullBtn then
+                    ---@type SquareIconButton
                     currentPullBtn = CreateFrame("Button", nil, MDT.main_frame, "SquareIconButtonTemplate")
                     currentPullBtn:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
                     currentPullBtn:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Down")
@@ -823,8 +827,11 @@ local OnEvent = function(_, ev, ...)
             MDT.DrawHull = function(...)
                 if not MDTGuideActive then return origFn(...) end
 
-                local scale = MDT:GetScale() or 1
                 local multipliers = MDT.scaleMultiplier
+                local scale = MDT:GetScale() or 1
+
+                local zoomScale = Addon.GetZoomScale()
+                if scale ~= 1 and zoomScale < 1 then scale = scale * zoomScale end
 
                 for i = 1, MDT:GetNumDungeons() do multipliers[i] = (multipliers[i] or 1) * scale end
 
@@ -837,6 +844,10 @@ local OnEvent = function(_, ev, ...)
             hooksecurefunc(MDT, "DrawHullFontString", function ()
                 local name = "MDTFontStringContainerFrame"
                 local scale = MDTGuideActive and MDT:GetScale() or 1
+
+                local zoomScale = Addon.GetZoomScale()
+                if scale ~= 1 and zoomScale < 1 then scale = scale * zoomScale end
+
                 local i = 0
                 while _G[name .. i] ~= nil do
                     _G[name .. i].fs:SetTextScale(scale)
