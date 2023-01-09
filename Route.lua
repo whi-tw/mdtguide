@@ -453,14 +453,13 @@ function Addon.BuildGroups()
 end
 
 function Addon.BuildPortals()
-    local start = GetTime()
-    local levels = MDT.mapPOIs[Addon.GetCurrentDungeonId()]
-    local numLevels = #levels
-
     wipe(portals)
 
+    local levels = MDT.mapPOIs[Addon.GetCurrentDungeonId()]
+    if not levels then return end
+
     -- Build cost matrix
-    for level,pois in pairs(levels) do
+    for _,pois in pairs(levels) do
         for _,poi in pairs(pois) do
             if poi.type == "mapLink" then
                 local i = poi.connectionIndex

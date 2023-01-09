@@ -1,3 +1,7 @@
+Version 1.15
+
+- Fix current instance detection and zooming to current pull
+
 Version 1.14
 
 - Fix top bar button placement

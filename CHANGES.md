@@ -1,1 +1,1 @@
-- Fix current instance detection and zooming to current pull
+- Fix portal map building for dungeons without portals
