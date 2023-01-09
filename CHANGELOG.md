@@ -1,3 +1,8 @@
+Version 1.16
+
+- Fix portal map building for dungeons without portals
+- Improve zoom levels for dragonflight season 1 dungeons
+
 Version 1.15
 
 - Fix current instance detection and zooming to current pull

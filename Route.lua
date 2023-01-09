@@ -56,11 +56,12 @@ end
 local function Last(path, enemies)
     if path == "" then
         local dungeon = Addon.GetCurrentDungeonId()
+        local pois = MDT.mapPOIs[dungeon]
 
         if Addon.dungeons[dungeon] and Addon.dungeons[dungeon].start then
             return nil, Addon.dungeons[dungeon].start
-        else
-            for _,poi in ipairs(MDT.mapPOIs[dungeon][1]) do
+        elseif pois and pois[1] then
+            for _,poi in ipairs(pois[1]) do
                 if poi.type == "graveyard" then
                     return nil, poi
                 end
@@ -93,30 +94,30 @@ local function Distance(from, to, forceSub)
 
     if not fromSub or not toSub or fromSub == toSub then
         return math.sqrt(math.pow(from.x - to.x, 2) + math.pow(from.y - to.y, 2))
-    else
-        local pois = MDT.mapPOIs[Addon.GetCurrentDungeonId()]
+    end
 
-        local min = math.huge
-        for _,fromPoi in pairs(pois[fromSub]) do
-            if fromPoi.type == "mapLink" then
-                local i = fromPoi.connectionIndex
-                local fromDist = Distance(from, fromPoi, fromSub)
-                for _,toPoi in pairs(pois[toSub]) do
-                    if toPoi.type == "mapLink" then
-                        local j = toPoi.connectionIndex
-                        local dist = portals[i][j]
-                        if dist and dist < min then
-                            min = math.min(min, fromDist + dist + Distance(toPoi, to, toSub))
-                        end
+    local min = math.huge
+
+    local pois = MDT.mapPOIs[Addon.GetCurrentDungeonId()]
+    if not pois or not pois[fromSub] or not pois[toSub] then return min end
+
+    for _,fromPoi in pairs(pois[fromSub]) do
+        if fromPoi.type == "mapLink" then
+            local i = fromPoi.connectionIndex
+            local fromDist = Distance(from, fromPoi, fromSub)
+            for _,toPoi in pairs(pois[toSub]) do
+                if toPoi.type == "mapLink" then
+                    local j = toPoi.connectionIndex
+                    local dist = portals[i][j]
+                    if dist and dist < min then
+                        min = math.min(min, fromDist + dist + Distance(toPoi, to, toSub))
                     end
                 end
             end
         end
-
-        return min
     end
 
-    return math.huge
+    return min
 end
 
 local function Weight(path, enemies)
