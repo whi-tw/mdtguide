@@ -12,7 +12,8 @@ MDTGuideOptions = {
     zoomMin = 1,
     zoomMax = 1,
     fade = false,
-    route = false
+    hide = false,
+    route = false,
 }
 
 Addon.WIDTH = 840
@@ -32,8 +33,9 @@ Addon.currentDungeon = nil
 
 local toggleBtn, currentPullBtn, announceBtn
 local hideFrames, hoverFrames
-local zoomAnimGrp
+local zoomAnimGrp, fadeAnimGrp
 local fadeTicker, isFaded
+local isHidden
 
 -- ---------------------------------------
 --              Toggle mode
@@ -449,23 +451,36 @@ end
 function Addon.FadeIn()
     if isFaded then
         isFaded = false
-        Addon.SetAlpha(1)
+        Addon.SetAlpha(1, true)
     end
 end
 
 function Addon.FadeOut()
     if isFaded and not Addon.MouseIsOver() then
-        Addon.SetAlpha(MDTGuideOptions.fade)
+        Addon.SetAlpha(MDTGuideOptions.fade, true)
     end
 end
 
 function Addon.SetAlpha(alpha, smooth)
-    MDT.main_frame:SetAlpha(alpha)
+    local main = MDT.main_frame
 
-    local i = 1
-    while _G["MDTPullButton" .. i] do
-        _G["MDTPullButton" .. i]:SetAlpha(alpha)
-        i = i + 1
+    if smooth then
+        local from = main:GetAlpha()
+        fadeAnimGrp = main:CreateAnimationGroup()
+        local anim = fadeAnimGrp:CreateAnimation("Animation")
+        anim:SetDuration(0.3)
+        anim:SetSmoothing("OUT")
+        anim:SetScript("OnUpdate", function()
+            Addon.SetAlpha(from + (alpha - from) * anim:GetSmoothProgress())
+        end)
+        anim:SetScript("OnFinished", function()
+            fadeAnimGrp = nil
+            Addon.SetAlpha(alpha)
+        end)
+        fadeAnimGrp:Play()
+    else
+        main:SetAlpha(alpha)
+        main.sidePanel.pullButtonsScrollFrame.frame:SetAlpha(alpha)
     end
 end
 
@@ -857,12 +872,29 @@ local OnEvent = function(_, ev, ...)
         end
     elseif ev == "SCENARIO_CRITERIA_UPDATE" and not Addon.UseRoute() then
         Addon.ZoomToCurrentPull(true)
+    elseif ev == "PLAYER_REGEN_ENABLED" or ev == "PLAYER_REGEN_DISABLED" then
+        if not MDTGuideActive or not MDT.main_frame then return end
+
+        local isShown = MDT.main_frame:IsShown()
+
+        if isShown and MDTGuideOptions.hide and ev == "PLAYER_REGEN_DISABLED" then
+            isHidden = true
+            MDT:HideInterface()
+        elseif isHidden then
+            isHidden = false
+            if not isShown then
+                MDT:ShowInterface()
+                Addon.ZoomToCurrentPull(true)
+            end
+        end
     end
 end
 
 Frame:SetScript("OnEvent", OnEvent)
 Frame:RegisterEvent("ADDON_LOADED")
 Frame:RegisterEvent("SCENARIO_CRITERIA_UPDATE")
+Frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+Frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 
 -- ---------------------------------------
 --                Options
@@ -885,7 +917,7 @@ function SlashCmdList.MDTG(args)
         end)
         Addon.Echo(cmd, "Height set to " .. arg1 .. ".")
 
-        -- Route
+    -- Route
     elseif cmd == "route" then
         Addon.UseRoute(arg1 ~= "off")
         Addon.Echo("Route estimation", MDTGuideOptions.route and "enabled" or "disabled")
@@ -910,6 +942,16 @@ function SlashCmdList.MDTG(args)
         Addon.SetFade(tonumber(arg1) or arg1 ~= "off" and 0.3)
         Addon.Echo("Fade", MDTGuideOptions.fade and "enabled" or "disabled")
 
+    -- Hide
+    elseif cmd == "hide" then
+        MDTGuideOptions.hide = arg1 ~= "off"
+
+        if isHidden and not MDT.main_frame:IsShown() then
+            MDT:ShowInterface()
+        end
+
+        Addon.Echo("Hide", MDTGuideOptions.hide and "enabled" or "disabled")
+
     -- Help
     else
         Addon.Echo("Usage")
@@ -921,6 +963,8 @@ function SlashCmdList.MDTG(args)
             .. MDTGuideOptions.zoomMin .. "/" .. MDTGuideOptions.zoomMax .. ", 1/1)")
         print("|cffcccccc/mdtg fade [on/off/<opacity>]|r: Enable/Disable fading or set opacity. (" ..
             (MDTGuideOptions.fade or "off") .. ", 0.3)")
+        print("|cffcccccc/mdtg hide [on/off]|r: Enable/Disable hiding in combat. (" ..
+            (MDTGuideOptions.hide or "off") .. ", off)")
         print("|cffcccccc/mdtg|r: Print this help message.")
         print("Legend: <...> = number, [...] = optional, .../... = either or, (..., ...) = (current, default)")
     end

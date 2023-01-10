@@ -192,7 +192,7 @@ local function Dequeue()
         local val = queue[1]
 
         queue[1], queue[queueSize], queueSize = queue[queueSize], nil, queueSize - 1
-        
+
         -- Heapify
         local min, i, l, r = 1
         repeat
@@ -234,7 +234,7 @@ local function DeepSearch(path, enemies, grp)
             end
         end
     end
-    
+
     return minPath or path
 end
 
@@ -271,7 +271,6 @@ end
 
 function Addon.CalculateRoute()
     local enemies = Addon.GetCurrentEnemies()
-    local dungeon = Addon.GetCurrentDungeonId()
     local t, i, n, grps = GetTime(), 1, 1, {}
 
     -- Start route
@@ -300,9 +299,9 @@ function Addon.CalculateRoute()
             useRoute, rerun = false, false
             break
         end
-        
+
         local length = Length(path)
-        
+
         -- Success
         if length == #kills then
             MDTGuideRoute = path
@@ -366,14 +365,15 @@ end
 function Addon.UpdateRoute(z)
     zoom = zoom or z
     rerun = false
-    if Addon.IsCurrentInstance() then
-        if co and coroutine.status(co) == "running" then
-            rerun = true
-        else
-            co = coroutine.create(Addon.CalculateRoute)
-            local ok, err = coroutine.resume(co)
-            if not ok then error(err) end
-        end
+
+    if not Addon.IsCurrentInstance() then return end
+
+    if co and coroutine.status(co) == "running" then
+        rerun = true
+    else
+        co = coroutine.create(Addon.CalculateRoute)
+        local ok, err = coroutine.resume(co)
+        if not ok then error(err) end
     end
 end
 
@@ -542,7 +542,7 @@ local OnEvent = function (_, ev, ...)
             if hits[destGUID] then
                 hits[destGUID] = nil
                 local npcId = Addon.GetNPCId(destGUID)
-                if Addon.AddKill(npcId) and Addon.UseRoute() then
+                if Addon.AddKill(npcId) and Addon.IsActive() and Addon.UseRoute() then
                     Addon.ZoomToCurrentPull(true)
                 end
             end

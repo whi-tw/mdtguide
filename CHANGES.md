@@ -1,1 +1,4 @@
 - Fix errors caused by missing start locations in dragonflight season 1 dungeons
+- Fix not fading some frames when fade is enabled
+- Make fading progress smoothly between values
+- Add option to hide window completely while in combat
