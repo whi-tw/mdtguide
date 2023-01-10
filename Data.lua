@@ -19,23 +19,23 @@ Addon.dungeons = {
     -- Theater of Pain
     [36] = { start = {x = 425, y = -442, sublevel = 1} },
     -- Ruby Life Pools
-    [42] = { scale = 1.5 },
+    [42] = { start = {x = 370, y = -515, sublevel = 1}, scale = 1.5 },
     -- The Nokhud Offensive
-    [43] = { scale = 0.5 },
+    [43] = { start = {x = 515, y = -221, sublevel = 1}, scale = 0.5 },
     -- The Azure Vault
-    [44] = { scale = 1.8 },
+    [44] = { start = {x = 637, y = -185, sublevel = 1}, scale = 1.8 },
     -- Algeth'ar Academy
-    [45] = { scale = 1.2 },
+    [45] = { start = {x = 385, y = -340, sublevel = 1}, scale = 1.2 },
     -- Shadowmoon Burial Grounds
-    [46] = { scale = 1.5 },
+    [46] = { start = {x = 070, y = -393, sublevel = 1}, scale = 1.5 },
     -- Temple of the Jade Serpent
-    [47] = { scale = 1.1 },
+    [47] = { start = {x = 270, y = -253, sublevel = 1}, scale = 1.1 },
     -- Brackenhide Hollow
-    [48] = {},
+    -- [48] = { start = {x = 000, y = -000, sublevel = 1} },
     -- Halls of Infusion
-    [49] = {},
+    -- [49] = { start = {x = 000, y = -000, sublevel = 1} },
     -- Neltharus
-    [50] = {},
+    -- [50] = { start = {x = 000, y = -000, sublevel = 1} },
     -- Uldaman Legacy of Tyr
-    [51] = {},
+    -- [51] = { start = {x = 000, y = -000, sublevel = 1} },
 }

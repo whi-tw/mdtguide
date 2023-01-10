@@ -1,3 +1,7 @@
+Version 1.17
+
+- Fix more errors caused by missing dungeon POIs
+
 Version 1.16
 
 - Fix portal map building for dungeons without portals

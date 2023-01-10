@@ -888,9 +888,9 @@ function SlashCmdList.MDTG(args)
         -- Route
     elseif cmd == "route" then
         Addon.UseRoute(arg1 ~= "off")
-        Addon.Echo("Route predition", MDTGuideOptions.route and "enabled" or "disabled")
+        Addon.Echo("Route estimation", MDTGuideOptions.route and "enabled" or "disabled")
 
-        -- Zoom
+    -- Zoom
     elseif cmd == "zoom" then
         arg1 = tonumber(arg1)
         if not arg1 then
@@ -905,24 +905,24 @@ function SlashCmdList.MDTG(args)
         MDTGuideOptions.zoomMax = arg2
         Addon.Echo("Zoom scale", "Set to " .. arg1 .. " / " .. arg2)
 
-        -- Fade
+    -- Fade
     elseif cmd == "fade" then
         Addon.SetFade(tonumber(arg1) or arg1 ~= "off" and 0.3)
         Addon.Echo("Fade", MDTGuideOptions.fade and "enabled" or "disabled")
 
-        -- Help
+    -- Help
     else
         Addon.Echo("Usage")
-        print("|cffcccccc/mdtg height <height>|r: Adjust the guide window size by setting the height. (current: " ..
-            math.floor(MDTGuideOptions.height) .. ", default: 200)")
-        print("|cffcccccc/mdtg route [on/off]|r: Enable/Disable route estimation. (current: " ..
-            (MDTGuideOptions.route and "on" or "off") .. ", default: off)")
-        print("|cffcccccc/mdtg zoom <min-or-both> [<max>]|r: Scale default min and max visible area size when zooming. (current: "
-            .. MDTGuideOptions.zoomMin .. " / " .. MDTGuideOptions.zoomMax .. ", default: 1 / 1)")
-        print("|cffcccccc/mdtg fade [on/off/<opacity>]|r: Enable/Disable fading or set opacity. (current: " ..
-            (MDTGuideOptions.fade or "off") .. ", default: 0.3)")
+        print("|cffcccccc/mdtg height <height>|r: Adjust the guide window size by setting the height. (" ..
+            math.floor(MDTGuideOptions.height) .. ", 200)")
+        print("|cffcccccc/mdtg route [on/off]|r: Enable/Disable route estimation. (" ..
+            (MDTGuideOptions.route and "on" or "off") .. ", off)")
+        print("|cffcccccc/mdtg zoom <min-or-both> [<max>]|r: Scale default min and max visible area size when zooming. ("
+            .. MDTGuideOptions.zoomMin .. "/" .. MDTGuideOptions.zoomMax .. ", 1/1)")
+        print("|cffcccccc/mdtg fade [on/off/<opacity>]|r: Enable/Disable fading or set opacity. (" ..
+            (MDTGuideOptions.fade or "off") .. ", 0.3)")
         print("|cffcccccc/mdtg|r: Print this help message.")
-        print("Legend: <...> = number, [...] = optional, .../... = either or")
+        print("Legend: <...> = number, [...] = optional, .../... = either or, (..., ...) = (current, default)")
     end
 end
 

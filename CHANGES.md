@@ -1,1 +1,1 @@
-- Fix more errors caused by missing dungeon POIs
+- Fix errors caused by missing start locations in dragonflight season 1 dungeons
