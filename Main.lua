@@ -970,7 +970,7 @@ function SlashCmdList.MDTG(args)
         print("|cffcccccc/mdtg fade [on/off/<opacity>]|r: Enable/Disable fading or set opacity. (" ..
             (MDTGuideDB.options.fade or "off") .. ", 0.3)")
         print("|cffcccccc/mdtg hide [on/off]|r: Enable/Disable hiding in combat. (" ..
-            (MDTGuideDB.options.hide or "off") .. ", off)")
+            (MDTGuideDB.options.hide and "on" or "off") .. ", off)")
         print("|cffcccccc/mdtg|r: Print this help message.")
         print("Legend: <...> = number, [...] = optional, .../... = either or, (..., ...) = (current, default)")
     end
