@@ -20,11 +20,13 @@ Addon.ROUTE_MAX_FRAME = 20
 Addon.ROUTE_MAX_FRAME_SCALE = 0.3
 -- Total time to spend on route estimation (in s)
 Addon.ROUTE_MAX_TOTAL = 5
+-- Tolerance for spawn time comparison
+Addon.SPAWN_TIME_TOLERANCE = 2
 
 local queue, queueSize, weights = {}, 0, {}
 local maxLength, minWeight = 0, math.huge
 local pulls, groups, portals = {}, {}, {}
-local hits, kills = {}, {}
+local combatStart, hits = math.huge, {}
 local co, rerun, zoom, retry
 
 -- DEBUG
@@ -67,10 +69,6 @@ local function Last(path, enemies)
                 end
             end
         end
-
-        debug("No starting point!")
-
-        return
     else
         local enemyId, cloneId = path:match("-e(%d+)c(%d+)-$")
         if enemyId and cloneId then
@@ -213,7 +211,7 @@ local function Dequeue()
 end
 
 local function DeepSearch(path, enemies, grp)
-    local enemyId = kills[Length(path)+1]
+    local enemyId = MDTGuideDB.route.kills[Length(path)+1]
     local minPath
 
     if grp and grp[enemyId] then
@@ -239,7 +237,7 @@ local function DeepSearch(path, enemies, grp)
 end
 
 local function WideSearch(path, enemies, grps)
-    local enemyId = kills[Length(path)+1]
+    local enemyId = MDTGuideDB.route.kills[Length(path)+1]
     local found
 
     if enemies and enemies[enemyId] then
@@ -265,7 +263,7 @@ local function WideSearch(path, enemies, grps)
     for _,p in pairs(grps) do
         Enqueue(p)
     end
-    
+
     return found
 end
 
@@ -274,7 +272,7 @@ function Addon.CalculateRoute()
     local t, i, n, grps = GetTime(), 1, 1, {}
 
     -- Start route
-    local start = Sub(MDTGuideRoute, Addon.ROUTE_TRACK_BACK)
+    local start = Sub(MDTGuideDB.route.path, Addon.ROUTE_TRACK_BACK)
     weights[start] = 0
     Enqueue(start)
 
@@ -303,8 +301,8 @@ function Addon.CalculateRoute()
         local length = Length(path)
 
         -- Success
-        if length == #kills then
-            MDTGuideRoute = path
+        if length == #MDTGuideDB.route.kills then
+            MDTGuideDB.route.path = path
             break
         end
 
@@ -314,7 +312,7 @@ function Addon.CalculateRoute()
 
             -- Skip current enemy if no path was found
             if not found then
-                table.remove(kills, length+1)
+                table.remove(MDTGuideDB.route.kills, length+1)
                 Enqueue(path)
             end
 
@@ -324,8 +322,8 @@ function Addon.CalculateRoute()
         i, n = i+1, n+1
     end
 
-    debug("LENGTH", Length(MDTGuideRoute))
-    debug("WEIGHT", weights[MDTGuideRoute])
+    debug("LENGTH", Length(MDTGuideDB.route.path))
+    debug("WEIGHT", weights[MDTGuideDB.route.path])
     debug("LOOPS", n)
     debug("TIME", GetTime() - t)
     debug("QUEUE", queueSize)
@@ -353,13 +351,13 @@ end
 
 function Addon.UseRoute(val)
     if val ~= nil then
-        MDTGuideOptions.route = val
+        MDTGuideDB.options.route = val
         if val == true then
             useRoute = true
         end
     end
 
-    return MDTGuideOptions.route and useRoute
+    return MDTGuideDB.options.route and useRoute
 end
 
 function Addon.UpdateRoute(z)
@@ -373,28 +371,28 @@ function Addon.UpdateRoute(z)
     else
         co = coroutine.create(Addon.CalculateRoute)
         local ok, err = coroutine.resume(co)
-        if not ok then error(err) end
+        if not ok then error(err .. "\n" .. debugstack(co)) end
     end
 end
 
 function Addon.AddKill(npcId)
-    for i,enemy in ipairs(MDT.dungeonEnemies[Addon.currentDungeon]) do
+    for i,enemy in ipairs(MDT.dungeonEnemies[MDTGuideDB.dungeon]) do
         if enemy.id == npcId then
-            table.insert(kills, i)
+            table.insert(MDTGuideDB.route.kills, i)
             return i
         end
     end
 end
 
-function Addon.ClearKills()
+function Addon.ResetRoute()
     wipe(hits)
-    wipe(kills)
-    MDTGuideRoute = ""
+    wipe(MDTGuideDB.route.kills)
+    MDTGuideDB.route.path = ""
     useRoute = true
 end
 
 function Addon.GetCurrentPullByRoute()
-    local path = MDTGuideRoute
+    local path = MDTGuideDB.route.path
 
     while path and path:len() > 0 do
         local node = Last(path) ---@cast node string
@@ -420,18 +418,32 @@ function Addon.GetCurrentPullByRoute()
     end
 end
 
-function Addon.SetDungeon()
+function Addon.SetCurrentDungeon()
     wipe(pulls)
 
     Addon.BuildGroups()
     Addon.BuildPortals()
-    Addon.UpdateRoute()
+    Addon.UpdateUseRoute()
 end
 
-function Addon.SetInstanceDungeon(dungeon)
-    Addon.currentDungeon = dungeon
-    Addon.ClearKills()
-    Addon.UpdateRoute()
+Addon.SetInstanceDungeon = Addon.FnDebounce(
+    function (dungeon)
+        if dungeon and MDTGuideDB.dungeon == dungeon then return end
+
+        MDTGuideDB.dungeon = dungeon
+
+        Addon.ResetRoute()
+        Addon.UpdateUseRoute()
+    end,
+    1, false, true
+)
+
+function Addon.UpdateUseRoute()
+    if not Addon.IsCurrentInstance() then return end
+
+    useRoute = useRoute and select(2, Last("")) ~= nil
+
+    if Addon.UseRoute() then Addon.UpdateRoute() end
 end
 
 function Addon.BuildGroups()
@@ -507,36 +519,39 @@ local OnEvent = function (_, ev, ...)
     if not MDT or MDT:GetDB().devMode then return end
 
     if ev == "PLAYER_ENTERING_WORLD" or ev == "ZONE_CHANGED_NEW_AREA" then
-        local _, instanceType = IsInInstance()
-        if instanceType == "party" then
-            local map = C_Map.GetBestMapForUnit("player")
-            if map then
-                local dungeon = Addon.GetInstanceDungeonId(map)
+        local isParty = select(2, IsInInstance()) == "party"
+        if not isParty then Frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED") return end
 
-                if dungeon ~= Addon.currentDungeon then
-                    Addon.SetInstanceDungeon(dungeon)
+        local map = C_Map.GetBestMapForUnit("player")
+        if not map then retry = {ev, ...} return end
 
-                    if dungeon then
-                        Frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-                    else
-                        Frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-                    end
-                end
-            else
-                retry = {ev, ...}
-            end
-        else
-            if instanceType then
-                Addon.SetInstanceDungeon()
-            end
-            Frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        end
+        local dungeon = Addon.GetInstanceDungeonId(map)
+        Addon.SetInstanceDungeon(dungeon)
+        if dungeon then Frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED") end
     elseif ev == "SCENARIO_COMPLETED" or ev == "CHAT_MSG_SYSTEM" and (...):match(Addon.PATTERN_INSTANCE_RESET) then
         Addon.SetInstanceDungeon()
         Frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    elseif ev == "PLAYER_REGEN_DISABLED" then
+        combatStart = GetServerTime()
+    elseif ev == "PLAYER_REGEN_ENABLED" then
+        combatStart = math.huge
     elseif ev == "COMBAT_LOG_EVENT_UNFILTERED" then
         ---@type _, string, _, _, _, number, _, string, _, number
         local _, event, _, _, _, sourceFlags, _, destGUID, _, destFlags = CombatLogGetCurrentEventInfo() --[[@as any]]
+
+        -- Ignore summoned mobs
+        local unitType, _, _, _, _, _, spawnUID = strsplit("-", destGUID)
+        if unitType == "Creature" or unitType == "Vehicle" then
+           local spawnEpoch = GetServerTime() - (GetServerTime() % 2^23)
+           local spawnEpochOffset = bit.band(tonumber(string.sub(spawnUID, 5), 16), 0x7fffff)
+           local spawnTime = spawnEpoch + spawnEpochOffset
+
+           -- Adjust for epoch rollover
+           if spawnTime > GetServerTime() then spawnTime = spawnTime - ((2^23) - 1) end
+
+           -- Ignore mobs that spawned during combat
+           if spawnTime - Addon.SPAWN_TIME_TOLERANCE > combatStart then return end
+        end
 
         if event == "UNIT_DIED" then
             if hits[destGUID] then
@@ -576,3 +591,5 @@ Frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 Frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 Frame:RegisterEvent("SCENARIO_COMPLETED")
 Frame:RegisterEvent("CHAT_MSG_SYSTEM")
+Frame:RegisterEvent("PLAYER_REGEN_DISABLED")
+Frame:RegisterEvent("PLAYER_REGEN_ENABLED")

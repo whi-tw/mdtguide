@@ -17,7 +17,7 @@ function Addon.GetInstanceDungeonId(map)
     end
 
     local instance = EJ_GetInstanceForMap(map)
-    if not instance then return end
+    if not instance or instance == 0 then return end
 
     for id,enemies in pairs(MDT.dungeonEnemies) do
         for _,enemy in pairs(enemies) do
@@ -33,7 +33,7 @@ function Addon.GetCurrentDungeonId()
 end
 
 function Addon.IsCurrentInstance()
-    return Addon.currentDungeon == Addon.GetCurrentDungeonId()
+    return MDTGuideDB.dungeon == Addon.GetCurrentDungeonId()
 end
 
 function Addon.GetDungeonScale(dungeon)
@@ -156,4 +156,79 @@ Addon.Chat = function (msg)
     else
         Addon.Echo(nil, msg)
     end
+end
+
+-- General purpose function slow-down
+---@param fn function
+---@param n number
+---@param debounce boolean
+---@param leading boolean
+---@param update boolean
+function Addon.FnSlowDown(fn, n, debounce, leading, update)
+    local args = {}
+    local handle, called, scheduler, handler
+
+    scheduler = function (...)
+        if not handle or update then
+            Addon.Pack(args, ...)
+        end
+
+        if handle then
+            called = true
+            if debounce then
+                handle = handle:Cancel()
+            end
+        elseif leading then
+            fn(...)
+        end
+
+        if not handle or debounce then
+            handle = C_Timer.NewTimer(n, handler)
+        end
+    end
+
+    handler = function ()
+        handle = handle:Cancel()
+        if not leading then
+            fn(Addon.Unpack(args))
+        elseif called then
+            called = nil
+            scheduler(Addon.Unpack(args))
+        end
+    end
+
+    return scheduler
+end
+
+-- Throttle a function, so it is executed at most every n seconds
+---@param fn function
+---@param n number
+---@param leading boolean
+---@param update boolean
+function Addon.FnThrottle(fn, n, leading, update)
+    return Addon.FnSlowDown(fn, n, false, leading, update)
+end
+
+-- Debounce a function, so it is executed only n seconds after the last call
+---@param fn function
+---@param n number
+---@param leading boolean
+---@param update boolean
+function Addon.FnDebounce(fn, n, leading, update)
+    return Addon.FnSlowDown(fn, n, true, leading, update)
+end
+
+-- Pack vararg data into an existing table
+---@param t table
+function Addon.Pack(t, ...)
+    wipe(t)
+    for i = 1, select('#', ...) do t[i] = select(i, ...) end
+    return t
+end
+
+local unpackFn = function (t, ...) wipe(t) return ... end
+-- Unpack and wipe a table
+---@param t table
+function Addon.Unpack(t)
+    return unpackFn(t, unpack(t))
 end
