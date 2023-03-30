@@ -692,7 +692,10 @@ local OnEvent = function(_, ev, ...)
             Addon.MigrateOptions()
 
             -- Hook showing interface
-            hooksecurefunc(MDT, "ShowInterface", function()
+            local ShowInterfaceInternal = MDT.ShowInterfaceInternal
+            MDT.ShowInterfaceInternal = function(...)
+                ShowInterfaceInternal(...)
+
                 local main = MDT.main_frame
 
                 -- Insert toggle button
@@ -764,7 +767,7 @@ local OnEvent = function(_, ev, ...)
                     MDTGuideDB.active = false
                     Addon.EnableGuideMode(true)
                 end
-            end)
+            end
 
             -- Hook maximize/minimize
             hooksecurefunc(MDT, "Maximize", function()
@@ -795,15 +798,16 @@ local OnEvent = function(_, ev, ...)
 
             -- Hook sublevel selection
             local fromSub
-            local origFn = MDT.SetMapSublevel
+            local SetMapSublevel = MDT.SetMapSublevel
             MDT.SetMapSublevel = function(...)
                 fromSub = MDT:GetCurrentSubLevel()
-                origFn(...)
+                SetMapSublevel(...)
             end
-            local origFn = MDT.SetCurrentSubLevel
+
+            local SetCurrentSubLevel = MDT.SetCurrentSubLevel
             MDT.SetCurrentSubLevel = function(...)
                 fromSub = MDT:GetCurrentSubLevel()
-                origFn(...)
+                SetCurrentSubLevel(...)
             end
 
             -- Hook pull selection
@@ -844,9 +848,9 @@ local OnEvent = function(_, ev, ...)
             end)
 
             -- Hook hull drawing
-            local origFn = MDT.DrawHull
+            local DrawHull = MDT.DrawHull
             MDT.DrawHull = function(...)
-                if not MDTGuideDB.active then return origFn(...) end
+                if not MDTGuideDB.active then return DrawHull(...) end
 
                 local multipliers = MDT.scaleMultiplier
                 local scale = MDT:GetScale() or 1
@@ -856,7 +860,7 @@ local OnEvent = function(_, ev, ...)
 
                 for i = 1, MDT:GetNumDungeons() do multipliers[i] = (multipliers[i] or 1) * scale end
 
-                origFn(...)
+                DrawHull(...)
 
                 for i, v in pairs(multipliers) do multipliers[i] = v / scale end
             end

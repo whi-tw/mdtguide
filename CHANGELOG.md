@@ -1,3 +1,13 @@
+Version 1.18
+
+- Add missing start locations for dragonflight S1 dungeons
+- Switch to enemy forces mode for dungeons with no known start locations
+- Fix not fading some frames when fade is enabled
+- Make fading progress smoothly between values
+- Add option to hide window completely while in combat
+- Remember current route when reloading/relogging or leaving the dungeon
+- Ignore mobs summoned during combat in route estimation
+
 Version 1.17
 
 - Fix more errors caused by missing dungeon POIs
