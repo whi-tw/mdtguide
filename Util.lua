@@ -150,6 +150,10 @@ Addon.Echo = function (title, line, ...)
     print("|cff00bbbb[MDTGuide]|r " .. (title and title ..": " or "") .. (line or ""), ...)
 end
 
+Addon.Error = function (line, ...)
+    print("|cffff0000[MDTGuide]|r " .. line:format(...))
+end
+
 Addon.Chat = function (msg)
     if IsInGroup() then
         SendChatMessage(msg, IsInGroup(LE_PARTY_CATEGORY_INSTANCE) and "INSTANCE_CHAT" or "PARTY")

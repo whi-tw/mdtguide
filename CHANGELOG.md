@@ -1,3 +1,7 @@
+Version 1.19
+
+- Fix missing guide mode toggle button
+
 Version 1.18
 
 - Add missing start locations for dragonflight S1 dungeons

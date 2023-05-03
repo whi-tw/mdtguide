@@ -1,1 +1,3 @@
-- Fix missing guide mode toggle button
+- Updated ToC version for patch 10.1
+- Add MDT version check to prevent breaking it
+- Skip blacklisting (hopefully this is temporary)

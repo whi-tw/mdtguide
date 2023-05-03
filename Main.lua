@@ -36,12 +36,14 @@ Addon.COLOR_CURR = { 0.13, 1, 1 }
 Addon.COLOR_DEAD = { 0.55, 0.13, 0.13 }
 Addon.DEBUG = false
 Addon.PATTERN_INSTANCE_RESET = "^" .. INSTANCE_RESET_SUCCESS:gsub("%%s", ".+") .. "$"
+Addon.MDT_VERSION = "4.0.3.*"
 
 local toggleBtn, currentPullBtn, announceBtn
 local hideFrames, hoverFrames
 local zoomAnimGrp, fadeAnimGrp
 local fadeTicker, isFaded
 local isHidden
+local mdtVersionMismatch
 
 -- ---------------------------------------
 --              Toggle mode
@@ -104,7 +106,6 @@ function Addon.EnableGuideMode(noZoom)
         main.toolbar.toggleButton:GetScript("OnClick")()
     end
 
-    MDT:ToggleFreeholdSelector()
     MDT:ToggleBoralusSelector()
 
     -- Adjust enemy info frame
@@ -675,6 +676,42 @@ function Addon.IsInRun()
     return Addon.IsActive() and Addon.IsCurrentInstance() and Addon.GetEnemyForces() and true
 end
 
+---@return boolean
+function Addon.CheckMDTVersion()
+    local cmp = 0
+
+    local a = C_AddOns.GetAddOnMetadata("MythicDungeonTools", "Version")
+
+    if not a then
+        cmp = -1
+    else
+        local b = Addon.MDT_VERSION
+        local ta, tb = { strsplit(".", a) }, { strsplit(".", b) }
+
+        for i = 1, max(#ta, #tb) do
+            if tb[i] == "*" then break end
+            local va, vb = tonumber(ta[i]) or 0, tonumber(tb[i]) or 0
+            if va < vb then cmp = -1 break end
+            if va > vb then cmp = 1 break end
+        end
+    end
+
+    if cmp ~= 0 then
+        Addon.Error("============================================")
+        Addon.Error("Unsupported Mythic Dungeon Tools version %s detected!", a or "?")
+        Addon.Error("MDTGuide only supports MDT versions %s.", Addon.MDT_VERSION)
+        Addon.Error("Please update your %s to the newest version.", cmp < 0 and "MDT" or "MDTGuide")
+        Addon.Error("If your MDT window is broken run the following: |cffcccccc/mdt reset|r")
+        Addon.Error("============================================")
+
+        mdtVersionMismatch = true
+
+        return false
+    end
+
+    return true
+end
+
 -- ---------------------------------------
 --              Events/Hooks
 -- ---------------------------------------
@@ -684,6 +721,7 @@ local Frame = CreateFrame("Frame")
 -- Event listeners
 local OnEvent = function(_, ev, ...)
     if not MDT or MDT:GetDB().devMode then return end
+    if mdtVersionMismatch then return end
 
     if ev == "ADDON_LOADED" then
         if ... == Name then
@@ -691,10 +729,20 @@ local OnEvent = function(_, ev, ...)
 
             Addon.MigrateOptions()
 
+            -- Prevent blacklisting TODO: Hopefully this is temporary
+            MDT.CheckAddonConflicts = function ()
+                return IsAddOnLoaded("DungeonTools")
+            end
+
+            -- Check MDT version
+            if not Addon.CheckMDTVersion() then return end
+
             -- Hook showing interface
-            local ShowInterfaceInternal = MDT.ShowInterfaceInternal
-            MDT.ShowInterfaceInternal = function(...)
-                ShowInterfaceInternal(...)
+            local initialized = false
+
+            hooksecurefunc(MDT, "UpdateBottomText", function()
+                if initialized then return end
+                initialized = true
 
                 local main = MDT.main_frame
 
@@ -767,7 +815,7 @@ local OnEvent = function(_, ev, ...)
                     MDTGuideDB.active = false
                     Addon.EnableGuideMode(true)
                 end
-            end
+            end)
 
             -- Hook maximize/minimize
             hooksecurefunc(MDT, "Maximize", function()
@@ -792,7 +840,7 @@ local OnEvent = function(_, ev, ...)
             end)
 
             -- Hook dungeon selection
-            hooksecurefunc(MDT, "UpdateToDungeon", function()
+            hooksecurefunc(MDT, "ZoomMapToDefault", function()
                 Addon.SetCurrentDungeon()
             end)
 
@@ -913,6 +961,8 @@ Frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 SLASH_MDTG1 = "/mdtg"
 
 function SlashCmdList.MDTG(args)
+    if mdtVersionMismatch then return end
+
     local cmd, arg1, arg2 = strsplit(' ', args)
 
     -- Height

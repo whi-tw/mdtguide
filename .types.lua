@@ -23,3 +23,7 @@
 ---@class IconButton: Button
 
 ---@class SquareIconButton: IconButton
+
+---@class C_Addons
+---@field GetAddOnMetadata fun(addonId: string | number, field: string): string
+C_AddOns = {}
