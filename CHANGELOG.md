@@ -1,3 +1,9 @@
+Version 1.20
+
+- Updated ToC version for patch 10.1
+- Add MDT version check to prevent breaking it
+- Skip blacklisting (hopefully this is temporary)
+
 Version 1.19
 
 - Fix missing guide mode toggle button

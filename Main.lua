@@ -44,6 +44,7 @@ local zoomAnimGrp, fadeAnimGrp
 local fadeTicker, isFaded
 local isHidden
 local mdtVersionMismatch
+local previousSublevel
 
 -- ---------------------------------------
 --              Toggle mode
@@ -313,10 +314,10 @@ function Addon.ZoomBy(factor)
     Addon.Zoom(scale, scrollX, scrollY)
 end
 
-function Addon.ZoomTo(minX, minY, maxX, maxY, subLevel, fromSub)
+function Addon.ZoomTo(minX, minY, maxX, maxY, subLevel)
     -- Change sublevel if required
     local currSub = MDT:GetCurrentSubLevel()
-    subLevel, fromSub = subLevel or currSub, fromSub or currSub
+    subLevel = subLevel or currSub
     if subLevel ~= currSub then
         MDT:SetCurrentSubLevel(subLevel)
         MDT:UpdateMap(true, true, true)
@@ -343,10 +344,10 @@ function Addon.ZoomTo(minX, minY, maxX, maxY, subLevel, fromSub)
     local scrollX = minX + diffX / 2 - Addon.WIDTH / s / 2
     local scrollY = -maxY + diffY / 2 - Addon.HEIGHT / s / 2
 
-    Addon.Zoom(s, scrollX * scale, scrollY * scale, subLevel == fromSub)
+    Addon.Zoom(s, scrollX * scale, scrollY * scale, subLevel == previousSublevel)
 end
 
-function Addon.ZoomToPull(n, fromSub)
+function Addon.ZoomToPull(n)
     n = n or MDT:GetCurrentPull()
 
     local pulls = Addon.GetCurrentPulls()
@@ -382,7 +383,7 @@ function Addon.ZoomToPull(n, fromSub)
     end
 
     -- Zoom to rect
-    Addon.ZoomTo(minX, minY, maxX, maxY, level, fromSub)
+    Addon.ZoomTo(minX, minY, maxX, maxY, level)
 
     -- Scroll pull list
     Addon.ScrollToPull(n)
@@ -618,10 +619,9 @@ function Addon.ZoomToCurrentPull(refresh)
     elseif Addon.IsActive() then
         local n, pull = Addon.GetCurrentPull()
         if n then
-            local fromSub = MDT:GetCurrentSubLevel()
             MDT:SetSelectionToPull(n)
             if MDT:GetCurrentSubLevel() ~= Addon.GetBestSubLevel(pull) then
-                Addon.ZoomToPull(n, fromSub)
+                Addon.ZoomToPull(n)
             end
         end
     end
@@ -676,8 +676,9 @@ function Addon.IsInRun()
     return Addon.IsActive() and Addon.IsCurrentInstance() and Addon.GetEnemyForces() and true
 end
 
----@return boolean
 function Addon.CheckMDTVersion()
+    if mdtVersionMismatch ~= nil then return end
+
     local cmp = 0
 
     local a = C_AddOns.GetAddOnMetadata("MythicDungeonTools", "Version")
@@ -696,20 +697,16 @@ function Addon.CheckMDTVersion()
         end
     end
 
-    if cmp ~= 0 then
+    mdtVersionMismatch = cmp ~= 0
+
+    if mdtVersionMismatch then
         Addon.Error("============================================")
         Addon.Error("Unsupported Mythic Dungeon Tools version %s detected!", a or "?")
         Addon.Error("MDTGuide only supports MDT versions %s.", Addon.MDT_VERSION)
         Addon.Error("Please update your %s to the newest version.", cmp < 0 and "MDT" or "MDTGuide")
         Addon.Error("If your MDT window is broken run the following: |cffcccccc/mdt reset|r")
         Addon.Error("============================================")
-
-        mdtVersionMismatch = true
-
-        return false
     end
-
-    return true
 end
 
 -- ---------------------------------------
@@ -729,13 +726,10 @@ local OnEvent = function(_, ev, ...)
 
             Addon.MigrateOptions()
 
-            -- Prevent blacklisting TODO: Hopefully this is temporary
-            MDT.CheckAddonConflicts = function ()
-                return IsAddOnLoaded("DungeonTools")
-            end
-
             -- Check MDT version
-            if not Addon.CheckMDTVersion() then return end
+            Addon.CheckMDTVersion()
+
+            if mdtVersionMismatch then return end
 
             -- Hook showing interface
             local initialized = false
@@ -844,26 +838,11 @@ local OnEvent = function(_, ev, ...)
                 Addon.SetCurrentDungeon()
             end)
 
-            -- Hook sublevel selection
-            local fromSub
-            local SetMapSublevel = MDT.SetMapSublevel
-            MDT.SetMapSublevel = function(...)
-                fromSub = MDT:GetCurrentSubLevel()
-                SetMapSublevel(...)
-            end
-
-            local SetCurrentSubLevel = MDT.SetCurrentSubLevel
-            MDT.SetCurrentSubLevel = function(...)
-                fromSub = MDT:GetCurrentSubLevel()
-                SetCurrentSubLevel(...)
-            end
-
             -- Hook pull selection
             hooksecurefunc(MDT, "SetSelectionToPull", function(_, pull)
                 if Addon.IsActive() and tonumber(pull) and Addon.GetLastSubLevel(pull) == MDT:GetCurrentSubLevel() then
-                    Addon.ZoomToPull(pull, fromSub)
+                    Addon.ZoomToPull(pull)
                 end
-                fromSub = nil
             end)
 
             -- Hook pull tooltip
@@ -953,6 +932,13 @@ Frame:RegisterEvent("ADDON_LOADED")
 Frame:RegisterEvent("SCENARIO_CRITERIA_UPDATE")
 Frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 Frame:RegisterEvent("PLAYER_REGEN_DISABLED")
+
+local OnUpdate = function ()
+    if not MDT then return end
+    previousSublevel = MDT:GetCurrentSubLevel()
+end
+
+Frame:SetScript("OnUpdate", OnUpdate)
 
 -- ---------------------------------------
 --                Options

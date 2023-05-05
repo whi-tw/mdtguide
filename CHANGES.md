@@ -1,3 +1,2 @@
-- Updated ToC version for patch 10.1
-- Add MDT version check to prevent breaking it
-- Skip blacklisting (hopefully this is temporary)
+- Fix hull drawing when changing maps
+- Remove blacklist skipping again as it's no longer necessary
