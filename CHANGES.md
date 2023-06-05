@@ -1,2 +1,1 @@
-- Fix hull drawing when changing maps
-- Remove blacklist skipping again as it's no longer necessary
+- Updated for MDT 4.0.4.*

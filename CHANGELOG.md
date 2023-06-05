@@ -1,3 +1,8 @@
+Version 1.21
+
+- Fix hull drawing when changing maps
+- Remove blacklist skipping again as it's no longer necessary
+
 Version 1.20
 
 - Updated ToC version for patch 10.1

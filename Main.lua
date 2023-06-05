@@ -36,7 +36,7 @@ Addon.COLOR_CURR = { 0.13, 1, 1 }
 Addon.COLOR_DEAD = { 0.55, 0.13, 0.13 }
 Addon.DEBUG = false
 Addon.PATTERN_INSTANCE_RESET = "^" .. INSTANCE_RESET_SUCCESS:gsub("%%s", ".+") .. "$"
-Addon.MDT_VERSION = "4.0.3.*"
+Addon.MDT_VERSION = "4.0.4.*"
 
 local toggleBtn, currentPullBtn, announceBtn
 local hideFrames, hoverFrames
