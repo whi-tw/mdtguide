@@ -1,3 +1,7 @@
+Version 1.22
+
+- Updated for MDT 4.0.4.*
+
 Version 1.21
 
 - Fix hull drawing when changing maps
