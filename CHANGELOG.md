@@ -1,3 +1,7 @@
+Version 1.23
+
+- Updated for patch 10.1.5
+
 Version 1.22
 
 - Updated for MDT 4.0.4.*

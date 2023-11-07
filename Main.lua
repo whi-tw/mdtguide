@@ -36,7 +36,7 @@ Addon.COLOR_CURR = { 0.13, 1, 1 }
 Addon.COLOR_DEAD = { 0.55, 0.13, 0.13 }
 Addon.DEBUG = false
 Addon.PATTERN_INSTANCE_RESET = "^" .. INSTANCE_RESET_SUCCESS:gsub("%%s", ".+") .. "$"
-Addon.MDT_VERSION = "4.0.4.*"
+Addon.MDT_VERSION = "4.2.0.*"
 
 local toggleBtn, currentPullBtn, announceBtn
 local hideFrames, hoverFrames
@@ -392,14 +392,16 @@ end
 function Addon.ScrollToPull(n, center)
     local main = MDT.main_frame
     local scroll = main.sidePanel.pullButtonsScrollFrame
+
     local pull = main.sidePanel.newPullButtons[n]
+    if not pull then return end
 
     local height = scroll.scrollframe:GetHeight()
     local offset = (scroll.status or scroll.localstatus).offset
     local top = -select(5, pull.frame:GetPoint(1))
     local bottom = top + pull.frame:GetHeight()
 
-    local diff, scrollTo = scroll.content:GetHeight() - height
+    local diff, scrollTo = scroll.content:GetHeight() - height, nil
 
     if center then
         scrollTo = max(0, min(top + (bottom - top) / 2 - height / 2, diff))
@@ -409,10 +411,10 @@ function Addon.ScrollToPull(n, center)
         scrollTo = bottom - height
     end
 
-    if scrollTo then
-        scroll:SetScroll(scrollTo / diff * 1000)
-        scroll:FixScroll()
-    end
+    if not scrollTo then return end
+
+    scroll:SetScroll(scrollTo / diff * 1000)
+    scroll:FixScroll()
 end
 
 -- ---------------------------------------
