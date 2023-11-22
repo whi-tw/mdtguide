@@ -147,11 +147,15 @@ Addon.Debug = function (...)
 end
 
 Addon.Echo = function (title, line, ...)
-    print("|cff00bbbb[MDTGuide]|r " .. (title and title ..": " or "") .. (line or ""), ...)
+    print("|cff00bbbb[MDTG]|r " .. (title and title ..": " or "") .. (line or ""):format(...))
+end
+
+Addon.Command = function (cmd, desc, ...)
+    Addon.Echo("|cffcccccc/mdtg " .. cmd .. "|r", desc, ...)
 end
 
 Addon.Error = function (line, ...)
-    print("|cffff0000[MDTGuide]|r " .. line:format(...))
+    print("|cffff0000[MDTG]|r " .. line:format(...))
 end
 
 Addon.Chat = function (msg)

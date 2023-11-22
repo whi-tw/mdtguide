@@ -1,3 +1,9 @@
+Version 1.24
+
+- Updated for patch 10.2
+- Updated for MDT 4.2.0.*
+- Fixed trying to scroll to pull when no pull data is available
+
 Version 1.23
 
 - Updated for patch 10.1.5

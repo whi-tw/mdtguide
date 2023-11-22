@@ -13,6 +13,7 @@ MDTGuideDB = {
         widthSide = 200,
         zoomMin = 1,
         zoomMax = 1,
+        animate = true,
         fade = false,
         hide = false,
         route = false,
@@ -275,7 +276,7 @@ function Addon.Zoom(s, x, y, smooth)
         zoomAnimGrp = zoomAnimGrp:Stop()
     end
 
-    if smooth then
+    if MDTGuideDB.options.animate and smooth then
         local fromS = map:GetScale()
         local fromX = scroll:GetHorizontalScroll()
         local fromY = scroll:GetVerticalScroll()
@@ -951,24 +952,13 @@ SLASH_MDTG1 = "/mdtg"
 function SlashCmdList.MDTG(args)
     if mdtVersionMismatch then return end
 
+    local op = MDTGuideDB.options
     local cmd, arg1, arg2 = strsplit(' ', args)
 
-    -- Height
-    if cmd == "height" then
-        arg1 = tonumber(arg1)
-        if not arg1 then
-            return Addon.Echo(cmd, "First parameter must be a number.")
-        end
-
-        Addon.ReloadGuideMode(function()
-            MDTGuideDB.options.height = tonumber(arg1)
-        end)
-        Addon.Echo(cmd, "Height set to " .. arg1 .. ".")
-
     -- Route
-    elseif cmd == "route" then
+    if cmd == "route" then
         Addon.UseRoute(arg1 ~= "off")
-        Addon.Echo("Route estimation", MDTGuideDB.options.route and "enabled" or "disabled")
+        Addon.Echo("Route estimation", op.route and "enabled" or "disabled")
 
     -- Zoom
     elseif cmd == "zoom" then
@@ -981,45 +971,46 @@ function SlashCmdList.MDTG(args)
             return Addon.Echo(cmd, "Second parameter must be a number if set.")
         end
 
-        MDTGuideDB.options.zoomMin = arg1
-        MDTGuideDB.options.zoomMax = arg2
-        Addon.Echo("Zoom scale", "Set to " .. arg1 .. " / " .. arg2)
+        op.zoomMin = arg1
+        op.zoomMax = arg2
+        Addon.Echo("Zoom scale", "Set to %s/%s", arg1, arg2)
 
     -- Fade
     elseif cmd == "fade" then
         Addon.SetFade(tonumber(arg1) or arg1 ~= "off" and 0.3)
-        Addon.Echo("Fade", MDTGuideDB.options.fade and "enabled" or "disabled")
+        Addon.Echo("Fade", op.fade and "enabled" or "disabled")
 
-    -- Hide
+        -- Hide
     elseif cmd == "hide" then
-        MDTGuideDB.options.hide = arg1 ~= "off"
+        op.hide = arg1 ~= "off"
 
         if isHidden and not MDT.main_frame:IsShown() then
             MDT:ShowInterface()
         end
 
-        Addon.Echo("Hide", MDTGuideDB.options.hide and "enabled" or "disabled")
+        Addon.Echo("Hide", op.hide and "enabled" or "disabled")
+
+    -- Animate
+    elseif cmd == "animate" then
+        op.animate = arg1 ~= "off"
+
+        Addon.Echo("Animations", op.animate and "enabled" or "disabled")
 
     -- Help
     else
         Addon.Echo("Usage")
-        print("|cffcccccc/mdtg height <height>|r: Adjust the guide window size by setting the height. (" ..
-            math.floor(MDTGuideDB.options.height) .. ", 200)")
-        print("|cffcccccc/mdtg route [on/off]|r: Enable/Disable route estimation. (" ..
-            (MDTGuideDB.options.route and "on" or "off") .. ", off)")
-        print("|cffcccccc/mdtg zoom <min-or-both> [<max>]|r: Scale default min and max visible area size when zooming. ("
-            .. MDTGuideDB.options.zoomMin .. "/" .. MDTGuideDB.options.zoomMax .. ", 1/1)")
-        print("|cffcccccc/mdtg fade [on/off/<opacity>]|r: Enable/Disable fading or set opacity. (" ..
-            (MDTGuideDB.options.fade or "off") .. ", 0.3)")
-        print("|cffcccccc/mdtg hide [on/off]|r: Enable/Disable hiding in combat. (" ..
-            (MDTGuideDB.options.hide and "on" or "off") .. ", off)")
-        print("|cffcccccc/mdtg|r: Print this help message.")
-        print("Legend: <...> = number, [...] = optional, .../... = either or, (..., ...) = (current, default)")
+        Addon.Command("route [on/off]", "Enable/Disable route estimation. (%s, off)", op.route and "on" or "off")
+        Addon.Command("zoom <min-or-both> [<max>]", "Scale default min/max visible area size when zooming. (%s/%s, 1/1)", op.zoomMin, op.zoomMax)
+        Addon.Command("fade [on/off/<opacity>]", "Enable/Disable fading or set opacity. (%s, 0.3)", op.fade or "off")
+        Addon.Command("hide [on/off]", "Enable/Disable hiding in combat. (%s, off)", op.hide and "on" or "off")
+        Addon.Command("animate [on/off]", "Enable/Disable animations. (%s, on)", op.animate and "on" or "off")
+        Addon.Echo("|cffcccccc/mdtg|r", "Print this help message.")
+        Addon.Echo("Legend", "<...> = number, [...] = optional, .../... = either or, (..., ...) = (current, default)")
     end
 end
 
 function Addon.MigrateOptions()
-    -- TODO: Legacy globals
+    -- Legacy globals
     if MDTGuideOptions and MDTGuideOptions.version == 1 then
         MDTGuideDB.active = MDTGuideActive
         MDTGuideDB.options = MDTGuideOptions
@@ -1027,11 +1018,18 @@ function Addon.MigrateOptions()
         MDTGuideOptions = nil
     end
 
-    if not MDTGuideDB.options.version then
-        MDTGuideDB.options.zoom = nil
-        MDTGuideDB.options.zoomMin = 1
-        MDTGuideDB.options.zoomMax = 1
-        MDTGuideDB.options.route = false
-        MDTGuideDB.options.version = 1
+    -- Migrate options
+    local op = MDTGuideDB.options
+
+    if not op.version then
+        op.zoom = nil
+        op.zoomMin = 1
+        op.zoomMax = 1
+        op.route = false
+        op.version = 1
+    end
+    if op.version <= 1 then
+        op.animate = true
+        op.version = 2
     end
 end
