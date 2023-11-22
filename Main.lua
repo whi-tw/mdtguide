@@ -58,9 +58,7 @@ function Addon.EnableGuideMode(noZoom)
     local main = MDT.main_frame
 
     -- Hide frames
-    for _, f in pairs(Addon.GetHideFrames()) do
-        (f.frame or f):Hide()
-    end
+    Addon.ToggleHideFrames()
 
     -- Resize
     main:SetResizeBounds(Addon.MIN_HEIGHT * Addon.RATIO, Addon.MIN_HEIGHT)
@@ -132,9 +130,7 @@ function Addon.DisableGuideMode()
 
     local main = MDT.main_frame
 
-    for _, f in pairs(Addon.GetHideFrames()) do
-        (f.frame or f):Show()
-    end
+    Addon.ToggleHideFrames()
 
     -- Reset top panel
     local f = main.topPanel
@@ -235,8 +231,9 @@ function Addon.AdjustEnemyInfo()
     end
 end
 
-function Addon.GetHideFrames()
+function Addon.ToggleHideFrames()
     local main = MDT.main_frame
+    local fn = MDTGuideDB.active and "Hide" or "Show"
 
     hideFrames = hideFrames or {
         main.bottomPanelString,
@@ -248,7 +245,10 @@ function Addon.GetHideFrames()
         main.DungeonSelectionGroup
     }
 
-    return hideFrames
+    for _, f in pairs(hideFrames) do
+        f = f.frame or f
+        f[fn](f)
+    end
 end
 
 -- ---------------------------------------
@@ -807,6 +807,11 @@ local OnEvent = function(_, ev, ...)
 
                     announceBtn:SetPoint("RIGHT", currentPullBtn, "LEFT", -8, 0)
                 end
+
+                hooksecurefunc(main, "Show", function ()
+                    if not MDTGuideDB.active then return end
+                    Addon.ToggleHideFrames()
+                end)
 
                 if MDTGuideDB.active then
                     MDTGuideDB.active = false
